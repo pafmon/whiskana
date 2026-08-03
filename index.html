@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#211912" />
+  <title>Whisky Trail Scotland</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --card: #fffdf9;
+      --ink: #241d17;
+      --muted: #74695f;
+      --line: #d9cdbf;
+      --accent: #a45f20;
+      --accent-dark: #764114;
+      --dark: #211912;
+      --danger: #a43b34;
+      --soft: #eee5d8;
+      --radius: 18px;
+      --shadow: 0 10px 28px rgba(52, 37, 25, .09);
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding-bottom: calc(88px + env(safe-area-inset-bottom));
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(164,95,32,.09), transparent 36%),
+        var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(100%, 820px);
+      margin: 0 auto;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 500;
+      padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+      color: white;
+      background: linear-gradient(145deg, #19130f, #3c2a1d);
+      box-shadow: 0 4px 18px rgba(0,0,0,.2);
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.08rem;
+      letter-spacing: .01em;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: #d9c9b9;
+      font-size: .78rem;
+    }
+
+    .badge {
+      min-width: 44px;
+      padding: 7px 10px;
+      text-align: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 12px 14px 0;
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 13px;
+      padding: 11px 8px;
+      color: var(--muted);
+      background: rgba(255,255,255,.55);
+      font-weight: 780;
+    }
+
+    .tab.active {
+      color: white;
+      background: var(--accent);
+      box-shadow: 0 5px 16px rgba(121,67,21,.22);
+    }
+
+    main { padding: 14px; }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 9px;
+      margin-bottom: 13px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 45px;
+      padding: 11px 12px;
+      color: var(--ink);
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(164,95,32,.13);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 13px;
+      padding: 11px 13px;
+      font-weight: 800;
+    }
+
+    .btn.primary { color: white; background: var(--accent); }
+    .btn.primary:active { background: var(--accent-dark); }
+    .btn.secondary { color: var(--ink); background: var(--soft); }
+    .btn.danger { color: var(--danger); background: #f3dcda; }
+
+    .cards {
+      display: grid;
+      gap: 11px;
+    }
+
+    .card {
+      padding: 15px;
+      background: var(--card);
+      border: 1px solid rgba(217,205,191,.85);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .distillery {
+      margin-top: 4px;
+      color: var(--accent-dark);
+      font-size: .85rem;
+      font-weight: 800;
+    }
+
+    .score {
+      width: 52px;
+      height: 52px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      color: white;
+      background: var(--dark);
+      font-size: 1.03rem;
+      font-weight: 850;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 11px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+
+    .pill {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--soft);
+    }
+
+    .notes {
+      margin: 11px 0 0;
+      color: #4c4138;
+      font-size: .88rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 13px;
+    }
+
+    .card-actions .btn { flex: 1; padding: 9px 10px; }
+
+    .empty {
+      padding: 42px 20px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.48);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+    }
+
+    .map-shell {
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    #map {
+      height: 56vh;
+      min-height: 360px;
+      background: #e6dfd5;
+    }
+
+    .map-tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      padding: 11px;
+    }
+
+    .map-help {
+      margin: 10px 3px 0;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.45rem;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    .export-box {
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .export-box h2 {
+      margin: 0 0 7px;
+      font-size: 1rem;
+    }
+
+    .export-box p {
+      margin: 0 0 13px;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.4;
+    }
+
+    .export-actions {
+      display: grid;
+      gap: 9px;
+    }
+
+    .fab {
+      position: fixed;
+      z-index: 600;
+      right: max(18px, calc((100vw - 820px) / 2 + 18px));
+      bottom: calc(17px + env(safe-area-inset-bottom));
+      padding: 14px 18px;
+      color: white;
+      background: var(--accent);
+      border: 0;
+      border-radius: 999px;
+      box-shadow: 0 9px 28px rgba(121,67,21,.35);
+      font-weight: 850;
+    }
+
+    dialog {
+      width: min(calc(100% - 18px), 760px);
+      max-height: calc(100vh - 18px);
+      padding: 0;
+      color: var(--ink);
+      background: var(--card);
+      border: 0;
+      border-radius: 22px;
+      box-shadow: 0 25px 70px rgba(0,0,0,.34);
+    }
+
+    dialog::backdrop {
+      background: rgba(22,15,10,.62);
+      backdrop-filter: blur(2px);
+    }
+
+    .dialog-head {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dialog-head h2 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .close {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--soft);
+      font-size: 1.15rem;
+    }
+
+    form { padding: 16px; }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: #554a41;
+      font-size: .79rem;
+      font-weight: 780;
+    }
+
+    .location-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .form-actions {
+      position: sticky;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 9px;
+      margin: 16px -16px -16px;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(255,253,249,.96);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: .73rem;
+      font-weight: 500;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 14px;
+    }
+
+    @media (min-width: 680px) {
+      .stats-grid { grid-template-columns: repeat(4, 1fr); }
+      .export-actions { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="header-row">
+        <div>
+          <h1>🥃 Jose&Pablo Whisky Trail Scotland</h1>
+          <p class="subtitle">Cuaderno local de catas y visitas</p>
+        </div>
+        <div class="badge" id="headerCount">0</div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Secciones">
+      <button class="tab active" data-view="reviews">Catas</button>
+      <button class="tab" data-view="mapView">Mapa</button>
+      <button class="tab" data-view="summary">Resumen</button>
+    </nav>
+
+    <main>
+      <section id="reviews" class="view active">
+        <div class="toolbar">
+          <input id="searchInput" type="search" placeholder="Buscar whisky o destilería…" />
+          <button id="sortButton" class="btn secondary" type="button">Recientes</button>
+        </div>
+        <div id="reviewList" class="cards"></div>
+      </section>
+
+      <section id="mapView" class="view">
+        <div class="map-shell">
+          <div id="map"></div>
+          <div class="map-tools">
+            <button id="locateButton" class="btn primary" type="button">📍 Mi ubicación</button>
+            <button id="fitMarkersButton" class="btn secondary" type="button">Ver visitas</button>
+          </div>
+        </div>
+        <p class="map-help">
+          Puedes guardar la ubicación GPS al crear una cata o pulsar directamente sobre el mapa para preparar unas coordenadas. El mapa base necesita conexión; los puntos quedan guardados localmente.
+        </p>
+      </section>
+
+      <section id="summary" class="view">
+        <div class="stats-grid">
+          <div class="stat"><strong id="statTotal">0</strong><span>Catas</span></div>
+          <div class="stat"><strong id="statDistilleries">0</strong><span>Destilerías</span></div>
+          <div class="stat"><strong id="statAverage">—</strong><span>Nota media</span></div>
+          <div class="stat"><strong id="statVisited">0</strong><span>Con ubicación</span></div>
+        </div>
+
+        <div class="export-box">
+          <h2>Exportar y gestionar datos</h2>
+          <p>El CSV incluye todos los campos de la review y las coordenadas. También puedes guardar una copia JSON completa para restaurarla después.</p>
+          <div class="export-actions">
+            <button id="exportCsvButton" class="btn primary" type="button">Exportar CSV</button>
+            <button id="exportJsonButton" class="btn secondary" type="button">Copia JSON</button>
+            <button id="importJsonButton" class="btn secondary" type="button">Importar JSON</button>
+          </div>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <button id="addButton" class="fab" type="button">＋ Nueva cata</button>
+
+  <dialog id="reviewDialog">
+    <div class="dialog-head">
+      <h2 id="dialogTitle">Nueva cata</h2>
+      <button id="closeDialog" class="close" type="button" aria-label="Cerrar">×</button>
+    </div>
+
+    <form id="reviewForm">
+      <input id="reviewId" type="hidden" />
+
+      <div class="form-grid">
+        <div class="two">
+          <label>
+            Fecha
+            <input id="date" type="date" required />
+          </label>
+          <label>
+            Hora
+            <input id="time" type="time" />
+          </label>
+        </div>
+
+        <label>
+          Destilería
+          <input id="distillery" list="distilleries" placeholder="Ej. Lagavulin" required />
+          <datalist id="distilleries">
+            <option value="Caol Ila"></option>
+            <option value="Lagavulin"></option>
+            <option value="The Macallan"></option>
+            <option value="Laphroaig"></option>
+            <option value="Ardbeg"></option>
+            <option value="Bowmore"></option>
+            <option value="Bruichladdich"></option>
+            <option value="Bunnahabhain"></option>
+            <option value="Kilchoman"></option>
+            <option value="Talisker"></option>
+            <option value="Oban"></option>
+            <option value="Glenfiddich"></option>
+            <option value="Glenlivet"></option>
+            <option value="Balvenie"></option>
+          </datalist>
+        </label>
+
+        <label>
+          Whisky / expresión
+          <input id="whisky" type="text" placeholder="Ej. Lagavulin 16" required />
+        </label>
+
+        <div class="two">
+          <label>
+            Edad
+            <input id="age" type="number" min="0" step="1" placeholder="16" />
+          </label>
+          <label>
+            Graduación (%)
+            <input id="abv" type="number" min="0" max="100" step="0.1" placeholder="43" />
+          </label>
+        </div>
+
+        <div class="two">
+          <label>
+            Tipo
+            <select id="type">
+              <option value="">Sin especificar</option>
+              <option>Single Malt</option>
+              <option>Blended Malt</option>
+              <option>Blended Scotch</option>
+              <option>Single Grain</option>
+              <option>Grain Whisky</option>
+              <option>Cask Strength</option>
+              <option>Otro</option>
+            </select>
+          </label>
+
+          <label>
+            Región
+            <select id="region">
+              <option value="">Sin especificar</option>
+              <option>Islay</option>
+              <option>Speyside</option>
+              <option>Highlands</option>
+              <option>Lowlands</option>
+              <option>Campbeltown</option>
+              <option>Islands</option>
+              <option>Otra</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Nariz
+          <textarea id="nose" placeholder="Aromas, intensidad, primera impresión…"></textarea>
+        </label>
+
+        <label>
+          Boca
+          <textarea id="palate" placeholder="Textura, sabores, evolución…"></textarea>
+        </label>
+
+        <label>
+          Final
+          <textarea id="finish" placeholder="Duración, sensaciones, recuerdo…"></textarea>
+        </label>
+
+        <label>
+          Sensación general
+          <textarea id="overall" placeholder="Qué te transmite, momento, comparación, comprarías una botella…"></textarea>
+        </label>
+
+        <div class="two">
+          <label>
+            Nota /100
+            <input id="scoreInput" type="number" min="0" max="100" step="1" placeholder="88" />
+          </label>
+          <label>
+            Precio (£)
+            <input id="price" type="number" min="0" step="0.01" placeholder="12.00" />
+          </label>
+        </div>
+
+        <label>
+          Lugar de la cata
+          <input id="place" type="text" placeholder="Centro de visitantes, bar, hotel…" />
+        </label>
+
+        <div class="location-row">
+          <div class="two">
+            <label>
+              Latitud
+              <input id="latitude" type="number" step="any" placeholder="55.6358" />
+            </label>
+            <label>
+              Longitud
+              <input id="longitude" type="number" step="any" placeholder="-6.1262" />
+            </label>
+          </div>
+          <button id="useLocationButton" class="btn secondary" type="button">Usar GPS</button>
+        </div>
+
+        <label>
+          Etiquetas
+          <input id="tags" type="text" placeholder="ahumado, turba, cítrico…" />
+          <span class="small">Separadas por comas.</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button id="cancelButton" class="btn secondary" type="button">Cancelar</button>
+        <button class="btn primary" type="submit">Guardar cata</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin="">
+  </script>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = "whiskyTrailScotland.reviews.v1";
+      let reviews = loadReviews();
+      let sortNewest = true;
+      let map = null;
+      let markerLayer = null;
+      let pendingMapPoint = null;
+
+      const $ = (id) => document.getElementById(id);
+      const dialog = $("reviewDialog");
+      const form = $("reviewForm");
+
+      function loadReviews() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveReviews() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews));
+        renderAll();
+      }
+
+      function uid() {
+        return crypto.randomUUID ? crypto.randomUUID() :
+          String(Date.now()) + Math.random().toString(16).slice(2);
+      }
+
+      function todayLocal() {
+        const d = new Date();
+        const offset = d.getTimezoneOffset();
+        return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 10);
+      }
+
+      function currentTime() {
+        return new Date().toTimeString().slice(0, 5);
+      }
+
+      function escapeHtml(value = "") {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function formatDate(date) {
+        if (!date) return "Sin fecha";
+        return new Intl.DateTimeFormat("es-ES", {
+          day: "2-digit", month: "short", year: "numeric"
+        }).format(new Date(date + "T12:00:00"));
+      }
+
+      function openNewReview() {
+        form.reset();
+        $("reviewId").value = "";
+        $("date").value = todayLocal();
+        $("time").value = currentTime();
+        $("dialogTitle").textContent = "Nueva cata";
+
+        if (pendingMapPoint) {
+          $("latitude").value = pendingMapPoint.lat.toFixed(6);
+          $("longitude").value = pendingMapPoint.lng.toFixed(6);
+          pendingMapPoint = null;
+        }
+
+        dialog.showModal();
+      }
+
+      function openEditReview(id) {
+        const r = reviews.find(item => item.id === id);
+        if (!r) return;
+
+        $("reviewId").value = r.id;
+        $("date").value = r.date || "";
+        $("time").value = r.time || "";
+        $("distillery").value = r.distillery || "";
+        $("whisky").value = r.whisky || "";
+        $("age").value = r.age ?? "";
+        $("abv").value = r.abv ?? "";
+        $("type").value = r.type || "";
+        $("region").value = r.region || "";
+        $("nose").value = r.nose || "";
+        $("palate").value = r.palate || "";
+        $("finish").value = r.finish || "";
+        $("overall").value = r.overall || "";
+        $("scoreInput").value = r.score ?? "";
+        $("price").value = r.price ?? "";
+        $("place").value = r.place || "";
+        $("latitude").value = r.latitude ?? "";
+        $("longitude").value = r.longitude ?? "";
+        $("tags").value = (r.tags || []).join(", ");
+        $("dialogTitle").textContent = "Editar cata";
+        dialog.showModal();
+      }
+
+      function collectForm() {
+        const existingId = $("reviewId").value;
+        const old = reviews.find(r => r.id === existingId);
+
+        const numOrNull = (id) => {
+          const value = $(id).value.trim();
+          return value === "" ? null : Number(value);
+        };
+
+        return {
+          id: existingId || uid(),
+          createdAt: old?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          date: $("date").value,
+          time: $("time").value,
+          distillery: $("distillery").value.trim(),
+          whisky: $("whisky").value.trim(),
+          age: numOrNull("age"),
+          abv: numOrNull("abv"),
+          type: $("type").value,
+          region: $("region").value,
+          nose: $("nose").value.trim(),
+          palate: $("palate").value.trim(),
+          finish: $("finish").value.trim(),
+          overall: $("overall").value.trim(),
+          score: numOrNull("scoreInput"),
+          price: numOrNull("price"),
+          place: $("place").value.trim(),
+          latitude: numOrNull("latitude"),
+          longitude: numOrNull("longitude"),
+          tags: $("tags").value.split(",").map(x => x.trim()).filter(Boolean)
+        };
+      }
+
+      function renderReviews() {
+        const q = $("searchInput").value.trim().toLowerCase();
+        let filtered = reviews.filter(r =>
+          [r.whisky, r.distillery, r.region, r.type, r.place, ...(r.tags || [])]
+            .join(" ").toLowerCase().includes(q)
+        );
+
+        filtered.sort((a, b) => {
+          const aa = `${a.date || ""}T${a.time || "00:00"}`;
+          const bb = `${b.date || ""}T${b.time || "00:00"}`;
+          return sortNewest ? bb.localeCompare(aa) : aa.localeCompare(bb);
+        });
+
+        if (!filtered.length) {
+          $("reviewList").innerHTML = `
+            <div class="empty">
+              <strong>${reviews.length ? "No hay coincidencias" : "Aún no hay catas"}</strong>
+              ${reviews.length ? "Prueba con otra búsqueda." : "Pulsa «Nueva cata» para registrar la primera."}
+            </div>`;
+          return;
+        }
+
+        $("reviewList").innerHTML = filtered.map(r => {
+          const detail = [
+            r.age !== null ? `${r.age} años` : "",
+            r.abv !== null ? `${r.abv}%` : "",
+            r.region || "",
+            r.type || "",
+            r.place || "",
+            r.latitude !== null && r.longitude !== null ? "📍 Con ubicación" : ""
+          ].filter(Boolean);
+
+          const summary = [r.nose, r.palate, r.finish, r.overall]
+            .filter(Boolean).join(" · ");
+
+          return `
+            <article class="card">
+              <div class="card-top">
+                <div>
+                  <h2>${escapeHtml(r.whisky)}</h2>
+                  <div class="distillery">${escapeHtml(r.distillery)}</div>
+                </div>
+                <div class="score">${r.score === null ? "—" : escapeHtml(r.score)}</div>
+              </div>
+
+              <div class="meta">
+                <span class="pill">${escapeHtml(formatDate(r.date))}${r.time ? " · " + escapeHtml(r.time) : ""}</span>
+                ${detail.map(x => `<span class="pill">${escapeHtml(x)}</span>`).join("")}
+                ${(r.tags || []).map(x => `<span class="pill">#${escapeHtml(x)}</span>`).join("")}
+              </div>
+
+              ${summary ? `<p class="notes">${escapeHtml(summary)}</p>` : ""}
+
+              <div class="card-actions">
+                ${r.latitude !== null && r.longitude !== null
+                  ? `<button class="btn secondary" data-map="${r.id}" type="button">Ver mapa</button>`
+                  : ""}
+                <button class="btn secondary" data-edit="${r.id}" type="button">Editar</button>
+                <button class="btn danger" data-delete="${r.id}" type="button">Borrar</button>
+              </div>
+            </article>`;
+        }).join("");
+
+        document.querySelectorAll("[data-edit]").forEach(btn =>
+          btn.addEventListener("click", () => openEditReview(btn.dataset.edit))
+        );
+
+        document.querySelectorAll("[data-delete]").forEach(btn =>
+          btn.addEventListener("click", () => deleteReview(btn.dataset.delete))
+        );
+
+        document.querySelectorAll("[data-map]").forEach(btn =>
+          btn.addEventListener("click", () => showReviewOnMap(btn.dataset.map))
+        );
+      }
+
+      function deleteReview(id) {
+        const r = reviews.find(x => x.id === id);
+        if (!r) return;
+        if (!confirm(`¿Borrar la cata de ${r.whisky}?`)) return;
+        reviews = reviews.filter(x => x.id !== id);
+        saveReviews();
+      }
+
+      function renderStats() {
+        const scored = reviews.filter(r => typeof r.score === "number");
+        const avg = scored.length
+          ? (scored.reduce((sum, r) => sum + r.score, 0) / scored.length).toFixed(1)
+          : "—";
+
+        $("headerCount").textContent = reviews.length;
+        $("statTotal").textContent = reviews.length;
+        $("statDistilleries").textContent =
+          new Set(reviews.map(r => r.distillery.trim().toLowerCase()).filter(Boolean)).size;
+        $("statAverage").textContent = avg;
+        $("statVisited").textContent =
+          reviews.filter(r => r.latitude !== null && r.longitude !== null).length;
+      }
+
+      function initMap() {
+        if (map || typeof L === "undefined") return;
+
+        map = L.map("map").setView([56.6, -4.3], 6);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap"
+        }).addTo(map);
+
+        markerLayer = L.layerGroup().addTo(map);
+
+        map.on("click", (event) => {
+          pendingMapPoint = event.latlng;
+          const popup = L.popup()
+            .setLatLng(event.latlng)
+            .setContent(`
+              <strong>Nueva ubicación</strong><br>
+              ${event.latlng.lat.toFixed(5)}, ${event.latlng.lng.toFixed(5)}<br><br>
+              <button id="popupNewReview" style="border:0;border-radius:9px;padding:8px 10px;background:#a45f20;color:white;font-weight:700">
+                Crear cata aquí
+              </button>
+            `)
+            .openOn(map);
+
+          setTimeout(() => {
+            const b = document.getElementById("popupNewReview");
+            if (b) b.onclick = openNewReview;
+          }, 0);
+        });
+
+        renderMapMarkers();
+      }
+
+      function renderMapMarkers() {
+        if (!map || !markerLayer) return;
+        markerLayer.clearLayers();
+
+        const located = reviews.filter(r =>
+          typeof r.latitude === "number" && typeof r.longitude === "number"
+        );
+
+        located.forEach(r => {
+          const marker = L.marker([r.latitude, r.longitude]).addTo(markerLayer);
+          marker.bindPopup(`
+            <strong>${escapeHtml(r.whisky)}</strong><br>
+            ${escapeHtml(r.distillery)}<br>
+            ${escapeHtml(formatDate(r.date))}
+            ${r.score !== null ? `<br>Nota: ${escapeHtml(r.score)}/100` : ""}
+          `);
+          marker.reviewId = r.id;
+        });
+      }
+
+      function fitMarkers() {
+        if (!map || !markerLayer) return;
+        const layers = markerLayer.getLayers();
+        if (!layers.length) {
+          alert("Todavía no hay catas con coordenadas guardadas.");
+          return;
+        }
+        map.fitBounds(L.featureGroup(layers).getBounds().pad(0.25));
+      }
+
+      function showReviewOnMap(id) {
+        const r = reviews.find(x => x.id === id);
+        if (!r || r.latitude === null || r.longitude === null) return;
+        switchView("mapView");
+        setTimeout(() => {
+          initMap();
+          map.invalidateSize();
+          map.setView([r.latitude, r.longitude], 14);
+          const marker = markerLayer.getLayers().find(m => m.reviewId === id);
+          if (marker) marker.openPopup();
+        }, 120);
+      }
+
+      function useCurrentLocation(callback) {
+        if (!navigator.geolocation) {
+          alert("Este navegador no permite obtener la ubicación.");
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          pos => callback(pos.coords.latitude, pos.coords.longitude),
+          err => alert("No se pudo obtener la ubicación: " + err.message),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        );
+      }
+
+      function switchView(id) {
+        document.querySelectorAll(".view").forEach(v =>
+          v.classList.toggle("active", v.id === id)
+        );
+        document.querySelectorAll(".tab").forEach(t =>
+          t.classList.toggle("active", t.dataset.view === id)
+        );
+
+        if (id === "mapView") {
+          setTimeout(() => {
+            initMap();
+            map?.invalidateSize();
+            renderMapMarkers();
+          }, 80);
+        }
+      }
+
+      function csvEscape(value) {
+        const text = value === null || value === undefined ? "" :
+          Array.isArray(value) ? value.join(" | ") : String(value);
+        return `"${text.replaceAll('"', '""')}"`;
+      }
+
+      function downloadBlob(filename, blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function exportCsv() {
+        if (!reviews.length) {
+          alert("No hay catas que exportar.");
+          return;
+        }
+
+        const fields = [
+          ["fecha", "date"], ["hora", "time"], ["destileria", "distillery"],
+          ["whisky", "whisky"], ["edad", "age"], ["graduacion_abv", "abv"],
+          ["tipo", "type"], ["region", "region"], ["nariz", "nose"],
+          ["boca", "palate"], ["final", "finish"], ["sensacion_general", "overall"],
+          ["nota_100", "score"], ["precio_gbp", "price"], ["lugar", "place"],
+          ["latitud", "latitude"], ["longitud", "longitude"], ["etiquetas", "tags"],
+          ["creado", "createdAt"], ["actualizado", "updatedAt"]
+        ];
+
+        const lines = [
+          fields.map(([header]) => csvEscape(header)).join(","),
+          ...reviews.map(r => fields.map(([, key]) => csvEscape(r[key])).join(","))
+        ];
+
+        const csv = "\uFEFF" + lines.join("\r\n");
+        downloadBlob(
+          `whisky-scotland-${todayLocal()}.csv`,
+          new Blob([csv], { type: "text/csv;charset=utf-8" })
+        );
+      }
+
+      function exportJson() {
+        const payload = JSON.stringify({
+          app: "Whisky Trail Scotland",
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          reviews
+        }, null, 2);
+
+        downloadBlob(
+          `whisky-scotland-backup-${todayLocal()}.json`,
+          new Blob([payload], { type: "application/json" })
+        );
+      }
+
+      function importJson(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            const incoming = Array.isArray(data) ? data : data.reviews;
+            if (!Array.isArray(incoming)) throw new Error("Formato no válido");
+            if (!confirm(`Se importarán ${incoming.length} catas y se reemplazarán los datos actuales. ¿Continuar?`)) return;
+            reviews = incoming;
+            saveReviews();
+          } catch (e) {
+            alert("No se pudo importar el archivo JSON.");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function renderAll() {
+        renderReviews();
+        renderStats();
+        renderMapMarkers();
+      }
+
+      $("addButton").addEventListener("click", openNewReview);
+      $("closeDialog").addEventListener("click", () => dialog.close());
+      $("cancelButton").addEventListener("click", () => dialog.close());
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const review = collectForm();
+        const index = reviews.findIndex(r => r.id === review.id);
+        if (index >= 0) reviews[index] = review;
+        else reviews.push(review);
+        saveReviews();
+        dialog.close();
+      });
+
+      $("searchInput").addEventListener("input", renderReviews);
+
+      $("sortButton").addEventListener("click", () => {
+        sortNewest = !sortNewest;
+        $("sortButton").textContent = sortNewest ? "Recientes" : "Antiguas";
+        renderReviews();
+      });
+
+      document.querySelectorAll(".tab").forEach(tab =>
+        tab.addEventListener("click", () => switchView(tab.dataset.view))
+      );
+
+      $("useLocationButton").addEventListener("click", () => {
+        useCurrentLocation((lat, lng) => {
+          $("latitude").value = lat.toFixed(6);
+          $("longitude").value = lng.toFixed(6);
+        });
+      });
+
+      $("locateButton").addEventListener("click", () => {
+        initMap();
+        useCurrentLocation((lat, lng) => {
+          map.setView([lat, lng], 14);
+          L.circleMarker([lat, lng], {
+            radius: 8, weight: 3, fillOpacity: .65
+          }).addTo(map).bindPopup("Tu ubicación actual").openPopup();
+        });
+      });
+
+      $("fitMarkersButton").addEventListener("click", fitMarkers);
+      $("exportCsvButton").addEventListener("click", exportCsv);
+      $("exportJsonButton").addEventListener("click", exportJson);
+      $("importJsonButton").addEventListener("click", () => $("importFile").click());
+
+      $("importFile").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (file) importJson(file);
+        e.target.value = "";
+      });
+
+      dialog.addEventListener("click", (event) => {
+        const rect = dialog.getBoundingClientRect();
+        const outside = event.clientX < rect.left || event.clientX > rect.right ||
+          event.clientY < rect.top || event.clientY > rect.bottom;
+        if (outside) dialog.close();
+      });
+
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
