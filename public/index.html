@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#211912" />
+  <title>Whiskana</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="style.css?v=20260804-2" />
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="header-row">
+        <div>
+          <h1>WHISKANA · Jose & Pablo Whisky Trail</h1>
+          <p class="subtitle">Cuaderno de catas y visitas</p>
+        </div>
+        <div class="badge" id="headerCount">0</div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Secciones">
+      <button class="tab active" data-view="reviews">Catas</button>
+      <button class="tab" data-view="mapView">Mapa</button>
+      <button class="tab" data-view="summary">Resumen</button>
+    </nav>
+
+    <main>
+      <section id="reviews" class="view active">
+        <div class="toolbar">
+          <input id="searchInput" type="search" placeholder="Buscar whisky o destilería…" />
+          <button id="sortButton" class="btn secondary" type="button">Recientes</button>
+        </div>
+        <div id="reviewList" class="cards"></div>
+      </section>
+
+      <section id="mapView" class="view">
+        <div class="map-shell">
+          <div id="map"></div>
+          <div class="map-tools">
+            <button id="locateButton" class="btn primary" type="button">📍 Mi ubicación</button>
+            <button id="fitMarkersButton" class="btn secondary" type="button">Ver visitas</button>
+          </div>
+        </div>
+        <p class="map-help">
+          Puedes guardar la ubicación GPS al crear una cata o pulsar el mapa para preparar unas coordenadas.
+        </p>
+      </section>
+
+      <section id="summary" class="view">
+        <div class="stats-grid">
+          <div class="stat"><strong id="statTotal">0</strong><span>Catas</span></div>
+          <div class="stat"><strong id="statDistilleries">0</strong><span>Destilerías</span></div>
+          <div class="stat"><strong id="statAverage">—</strong><span>Nota media</span></div>
+          <div class="stat"><strong id="statVisited">0</strong><span>Con ubicación</span></div>
+        </div>
+
+        <div class="summary-table-box">
+          <h2>Resumen de catas</h2>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th><button class="summary-sort-button" type="button" data-summary-sort="whiskyName">Nombre</button></th>
+                <th><button class="summary-sort-button" type="button" data-summary-sort="score">Puntos</button></th>
+                <th><button class="summary-sort-button" type="button" data-summary-sort="price">Precio</button></th>
+                <th><button class="summary-sort-button" type="button" data-summary-sort="map">Mapa</button></th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody"></tbody>
+          </table>
+          <div id="summaryPagination" class="summary-pagination"></div>
+        </div>
+
+        <div class="export-box">
+          <h2>Exportar y gestionar datos</h2>
+          <p>El CSV y el JSON se generan desde el backend y se descargan directamente.</p>
+          <button id="reloadDemoButton" class="link-button" type="button" title="Recargar los datos de demostración en Escocia">↻ Recargar demo</button>
+          <div class="export-actions">
+            <button id="exportCsvButton" class="btn primary" type="button">Exportar CSV</button>
+            <button id="exportJsonButton" class="btn secondary" type="button">Copia JSON</button>
+            <button id="importJsonButton" class="btn secondary" type="button">Importar JSON</button>
+          </div>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <button id="addButton" class="fab" type="button">＋ Nueva cata</button>
+
+  <dialog id="reviewDialog">
+    <div class="dialog-head">
+      <h2 id="dialogTitle">Nueva cata</h2>
+      <button id="closeDialog" class="close" type="button" aria-label="Cerrar">×</button>
+    </div>
+
+    <form id="reviewForm">
+      <input id="reviewId" type="hidden" />
+
+      <div class="form-grid">
+        <div class="two">
+          <label>
+            Fecha
+            <input id="date" type="date" required />
+          </label>
+          <label>
+            Hora
+            <input id="time" type="time" />
+          </label>
+        </div>
+
+        <div class="audio-box">
+          <div class="audio-actions">
+            <button id="audioRecordButton" class="btn primary" type="button">Grabar audio</button>
+            <button id="audioStopButton" class="btn secondary" type="button" hidden>Detener grabación</button>
+            <button id="audioUploadToggle" class="audio-toggle" type="button" aria-expanded="false" aria-controls="audioUploadPanel">
+              <span aria-hidden="true">📎</span>
+              <span class="audio-toggle-label">Subir archivo</span>
+            </button>
+          </div>
+          <div id="audioUploadPanel" class="audio-upload-panel" hidden>
+            <label class="audio-label">
+              Audio de la cata
+              <input id="audioInput" type="file" accept="audio/*" />
+            </label>
+            <button id="audioParseButton" class="btn secondary" type="button">Transcribir y rellenar</button>
+          </div>
+          <div id="transcriptPreview" class="transcript-preview" hidden></div>
+        </div>
+
+        <label>
+          Destilería
+          <input id="distillery" list="distilleries" placeholder="Ej. Lagavulin" required />
+          <datalist id="distilleries"></datalist>
+        </label>
+
+        <label>
+          Whisky / expresión
+          <input id="whisky" type="text" placeholder="Ej. Lagavulin 16" required />
+        </label>
+
+        <div class="two">
+          <label>
+            Edad
+            <input id="age" type="number" min="0" step="1" placeholder="16" />
+          </label>
+          <label>
+            Graduación (%)
+            <input id="abv" type="number" min="0" max="100" step="0.1" placeholder="43" />
+          </label>
+        </div>
+
+        <div class="two">
+          <label>
+            Tipo
+            <select id="type">
+              <option value="">Sin especificar</option>
+              <option>Single Malt</option>
+              <option>Blended Malt</option>
+              <option>Blended Scotch</option>
+              <option>Single Grain</option>
+              <option>Grain Whisky</option>
+              <option>Cask Strength</option>
+              <option>Otro</option>
+            </select>
+          </label>
+
+          <label>
+            Región
+            <select id="region">
+              <option value="">Sin especificar</option>
+              <option>Islay</option>
+              <option>Speyside</option>
+              <option>Highlands</option>
+              <option>Lowlands</option>
+              <option>Campbeltown</option>
+              <option>Islands</option>
+              <option>Otra</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Nariz
+          <textarea id="nose" placeholder="Aromas, intensidad, primera impresión…"></textarea>
+        </label>
+
+        <label>
+          Boca
+          <textarea id="palate" placeholder="Textura, sabores, evolución…"></textarea>
+        </label>
+
+        <label>
+          Final
+          <textarea id="finish" placeholder="Duración, sensaciones, recuerdo…"></textarea>
+        </label>
+
+        <label>
+          Sensación general
+          <textarea id="overall" placeholder="Qué te transmite, momento, comparación…"></textarea>
+        </label>
+
+        <div class="two">
+          <label>
+            Nota /100
+            <input id="scoreInput" type="number" min="0" max="100" step="1" placeholder="88" />
+          </label>
+          <label>
+            Precio (£)
+            <input id="price" type="number" min="0" step="0.01" placeholder="12.00" />
+          </label>
+        </div>
+
+        <label>
+          Lugar de la cata
+          <input id="place" type="text" placeholder="Centro de visitantes, bar, hotel…" />
+        </label>
+
+        <div class="location-row">
+          <div class="two">
+            <label>
+              Latitud
+              <input id="latitude" type="number" step="any" placeholder="55.6358" />
+            </label>
+            <label>
+              Longitud
+              <input id="longitude" type="number" step="any" placeholder="-6.1262" />
+            </label>
+          </div>
+          <button id="useLocationButton" class="btn secondary" type="button">Usar GPS</button>
+        </div>
+
+        <label>
+          Etiquetas
+          <input id="tags" type="text" placeholder="ahumado, turba, cítrico…" />
+          <span class="small">Separadas por comas.</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button id="cancelButton" class="btn secondary" type="button">Cancelar</button>
+        <button class="btn primary" type="submit">Guardar cata</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js?v=20260804-2"></script>
+</body>
+</html>
