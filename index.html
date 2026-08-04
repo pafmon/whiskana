@@ -230,8 +230,21 @@
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     crossorigin="">
   </script>
+  <script src="app.js"></script>
 
   <script>
+    // Placeholder script - app.js handles all functionality
+    (() => {
+      // App initialization is handled by app.js
+      if (typeof app !== 'undefined') {
+        console.log('Whiskana app loaded successfully');
+      }
+    })();
+
+  </script>
+
+  <script style="display:none;">
+    /* LEGACY CODE - REPLACED BY app.js
     (() => {
       const STORAGE_KEY = "whiskyTrailScotland.reviews.v1";
       let reviews = loadReviews();
@@ -717,6 +730,7 @@
 
       renderAll();
     })();
+    */
   </script>
 </body>
 </html>
